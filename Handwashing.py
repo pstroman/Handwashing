@@ -7,21 +7,21 @@ st.set_page_config(page_title="Mortality Rate by Clinic", layout="wide")
 # Title
 st.title("Mortality Rate by Clinic")
 
-# Text under title
+# Body text under title
 st.write("Handwashing began in 1847.")
 
-# Load data with FULL FILE PATH
+# Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv(r"C:\Users\tmans\Downloads\yearly_deaths_by_clinic-1.csv")
+    df = pd.read_csv("yearly_deaths_by_clinic-1.csv")
     return df
 
 df = load_data()
 
-# Clean column names
+# Make column names easier to work with
 df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
 
-# Rename columns to standard names
+# Rename columns if needed to standard names
 column_map = {}
 for col in df.columns:
     if "year" in col:
@@ -35,14 +35,13 @@ for col in df.columns:
 
 df = df.rename(columns=column_map)
 
-# Create mortality rate %
+# Create mortality rate percentage
 df["mortality_rate_pct"] = (df["deaths"] / df["births"]) * 100
 
 # Sidebar filters
 st.sidebar.header("Filters")
 
 clinic_options = sorted(df["clinic"].dropna().unique().tolist())
-
 selected_clinics = st.sidebar.multiselect(
     "Select Clinic(s)",
     options=clinic_options,
@@ -66,10 +65,9 @@ filtered_df = df[
     (df["year"] <= year_range[1])
 ]
 
-# Chart
+# Graph
 if not filtered_df.empty:
-
-    base_chart = alt.Chart(filtered_df).mark_line(point=True).encode(
+    line_chart = alt.Chart(filtered_df).mark_line(point=True).encode(
         x=alt.X("year:Q", title="Year"),
         y=alt.Y("mortality_rate_pct:Q", title="Mortality Rate (%)"),
         color=alt.Color("clinic:N", title="Clinic"),
@@ -80,7 +78,6 @@ if not filtered_df.empty:
         title="Mortality Rate Percentage by Year"
     )
 
-    # Vertical line at 1847
     handwashing_line = alt.Chart(pd.DataFrame({"year": [1847]})).mark_rule(
         strokeDash=[8, 4],
         size=2
@@ -88,7 +85,6 @@ if not filtered_df.empty:
         x="year:Q"
     )
 
-    # Label for line
     handwashing_label = alt.Chart(pd.DataFrame({
         "year": [1847],
         "label": ["Handwashing began (1847)"]
@@ -101,18 +97,17 @@ if not filtered_df.empty:
         text="label:N"
     )
 
-    final_chart = base_chart + handwashing_line + handwashing_label
-
+    final_chart = line_chart + handwashing_line + handwashing_label
     st.altair_chart(final_chart, use_container_width=True)
-
 else:
-    st.warning("No data available for selected filters.")
+    st.warning("No data available for the selected filters.")
 
 # Text under graph
 st.write("This shows clinic 1 and 2.")
 
-# Raw data table
+# Raw data table title
 st.subheader("Raw Data")
 
-raw_df = pd.read_csv(r"C:\Users\tmans\Downloads\yearly_deaths_by_clinic-1.csv")
+# Show exact csv file data
+raw_df = pd.read_csv("yearly_deaths_by_clinic-1.csv")
 st.dataframe(raw_df, use_container_width=True)
