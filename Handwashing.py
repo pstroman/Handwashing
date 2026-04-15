@@ -8,7 +8,7 @@ st.set_page_config(page_title="Mortality Rate by Clinic", layout="wide")
 st.title("Mortality Rate by Clinic")
 
 # Body text under title
-st.write("Handwashing began in 1847.")
+st.write("A look into the work of Dr. Ingaz Semmelweis, surrounding his studies into handwashing - which later led to the discovery of germs.")
 
 # Load data
 @st.cache_data
@@ -34,6 +34,17 @@ for col in df.columns:
         column_map[col] = "deaths"
 
 df = df.rename(columns=column_map)
+
+# Ensure numeric columns are correct
+df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
+df["births"] = pd.to_numeric(df["births"], errors="coerce")
+df["deaths"] = pd.to_numeric(df["deaths"], errors="coerce")
+
+# Drop bad rows if needed
+df = df.dropna(subset=["year", "births", "deaths", "clinic"])
+
+# Convert year back to standard int for charting
+df["year"] = df["year"].astype(int)
 
 # Create mortality rate percentage
 df["mortality_rate_pct"] = (df["deaths"] / df["births"]) * 100
@@ -68,32 +79,46 @@ filtered_df = df[
 # Graph
 if not filtered_df.empty:
     line_chart = alt.Chart(filtered_df).mark_line(point=True).encode(
-        x=alt.X("year:Q", title="Year"),
+        x=alt.X(
+            "year:Q",
+            title="Year",
+            axis=alt.Axis(format="d", tickMinStep=1)
+        ),
         y=alt.Y("mortality_rate_pct:Q", title="Mortality Rate (%)"),
         color=alt.Color("clinic:N", title="Clinic"),
-        tooltip=["year", "clinic", alt.Tooltip("mortality_rate_pct:Q", format=".2f")]
+        tooltip=[
+            alt.Tooltip("year:Q", format="d", title="Year"),
+            "clinic:N",
+            alt.Tooltip("mortality_rate_pct:Q", format=".2f", title="Mortality Rate (%)")
+        ]
     ).properties(
         width=900,
         height=450,
         title="Mortality Rate Percentage by Year"
     )
 
+    # Bright orange vertical line at 1847
     handwashing_line = alt.Chart(pd.DataFrame({"year": [1847]})).mark_rule(
-        strokeDash=[8, 4],
-        size=2
+        color="orange",
+        strokeWidth=3,
+        strokeDash=[8, 4]
     ).encode(
-        x="year:Q"
+        x=alt.X("year:Q")
     )
 
+    # Label for the 1847 line
     handwashing_label = alt.Chart(pd.DataFrame({
         "year": [1847],
-        "label": ["Handwashing began (1847)"]
+        "label": ["Handwashing Introduction"]
     })).mark_text(
+        color="orange",
         align="left",
-        dx=5,
-        dy=-200
+        dx=8,
+        dy=-180,
+        fontSize=13,
+        fontWeight="bold"
     ).encode(
-        x="year:Q",
+        x=alt.X("year:Q"),
         text="label:N"
     )
 
@@ -103,7 +128,7 @@ else:
     st.warning("No data available for the selected filters.")
 
 # Text under graph
-st.write("This shows clinic 1 and 2.")
+st.write("This graph shows the mortality rate of two similar clinics. The biggest difference being that clinic 1 is a full clinic that includes cadavers, where as clinic 2 focuses only on midwifery. As shown in the graph there is a dramatic drop in deaths in 1847 in clinic 1. This is due to the introduction of handwashing. Dr. Semmelweis discovered clinic 1 had more deaths and attributed it to the presence of cadavers, and a lack of cleanliness of hands when moving between cadavers and births. As you can see his introduction of handwashing decreased deaths in clinic 1, later attributed to the spread of germs.")
 
 # Raw data table title
 st.subheader("Raw Data")
